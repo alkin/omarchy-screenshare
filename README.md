@@ -83,8 +83,7 @@ In Google Chrome, also remove **Omarchy Screen Share Indicator** from `chrome://
 ## Development
 
 ```sh
-git clone https://github.com/alkin/omarchy-screenshare.git && cd omarchy-screenshare
-scripts/dev-sync                         # copy into ~/.config/omarchy/plugins (symlinks are not allowed)
+scripts/dev-sync                         # from a checkout: copy into ~/.config/omarchy/plugins (symlinks are not allowed)
 omarchy plugin validate ~/.config/omarchy/plugins/io.github.alkin.screenshare
 omarchy-shell io.github.alkin.screenshare debug | jq   # live detection state
 ```
