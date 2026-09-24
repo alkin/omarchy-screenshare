@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Focus the Chrome tab/window that is sharing.
+#
+#   screenshare-focus                  focus a Chrome window (PipeWire-only mode)
+#   screenshare-focus <hostPid> <tabId> activate that tab through the extension,
+#                                      then raise the window that shows it
+
+set -uo pipefail
+
+STATE_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/omarchy-screenshare"
+host_pid="${1:-}"
+tab_id="${2:-}"
+
+focus_address() {
+  [[ -n $1 ]] && hyprctl dispatch focuswindow "address:$1" >/dev/null
+}
+
+focus_any_chrome() {
+  local address
+  address=$(hyprctl clients -j | jq -r '[.[] | select(.class | test("chrom"; "i"))] | sort_by(.focusHistoryID) | .[0].address // empty')
+  focus_address "$address"
+}
+
+if [[ $host_pid =~ ^[0-9]+$ && $tab_id =~ ^[0-9]+$ ]]; then
+  fifo="$STATE_DIR/cmd-$host_pid"
+  state="$STATE_DIR/chrome-$host_pid.json"
+
+  if [[ -p $fifo ]]; then
+    # The host always holds the FIFO open, so this never blocks for long.
+    timeout 1 bash -c 'printf "%s\n" "$1" > "$2"' _ "{\"cmd\":\"focus\",\"tabId\":$tab_id}" "$fifo"
+
+    browser_pid=$(jq -r '.browserPid // empty' "$state" 2>/dev/null)
+    title=$(jq -r --argjson tab "$tab_id" '.sessions[] | select(.tabId == $tab) | .title' "$state" 2>/dev/null | head -n1)
+
+    # Once the tab is active its title becomes the window title.
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+      address=$(hyprctl clients -j | jq -r --arg title "$title" --arg pid "$browser_pid" '
+        [.[] | select(.class | test("chrom"; "i"))
+             | select($pid == "" or (.pid | tostring) == $pid)
+             | select($title != "" and (.title | startswith($title)))]
+        | .[0].address // empty')
+      if [[ -n $address ]]; then
+        focus_address "$address"
+        exit 0
+      fi
+      sleep 0.1
+    done
+  fi
+fi
+
+focus_any_chrome

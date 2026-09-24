@@ -1,0 +1,8 @@
+#!/bin/bash
+# Copy the working tree into the Omarchy plugins folder (plugins may not be symlinks).
+set -euo pipefail
+repo="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+target="$HOME/.config/omarchy/plugins/io.github.alkin.screenshare"
+mkdir -p "$target"
+rsync -a --delete --exclude .git --exclude scripts "$repo/" "$target/"
+echo "synced → $target"

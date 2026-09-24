@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.alkin.screenshare",
+  "name": "Screen Share Indicator",
+  "version": "1.0.0",
+  "author": "alkin",
+  "license": "MIT",
+  "description": "A chip next to the clock while Chrome is sharing your screen, a window or a tab.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Screen Share Indicator",
+    "description": "Shows what Chrome is sharing (screen, window or tab) and which site is sharing it. Click to jump to it.",
+    "category": "Status",
+    "allowMultiple": false,
+    "defaultSection": "center",
+    "defaults": {
+      "showLabel": true,
+      "pipewireFallback": true,
+      "previewDelayMs": 1000
+    },
+    "schema": [
+      {
+        "key": "showLabel",
+        "type": "boolean",
+        "label": "Show label",
+        "description": "Show Screen / Window / Tab next to the icon.",
+        "defaultValue": true
+      },
+      {
+        "key": "pipewireFallback",
+        "type": "boolean",
+        "label": "Detect without the Chrome extension",
+        "description": "Use PipeWire to detect screen and window shares when the optional extension is not installed.",
+        "defaultValue": true
+      },
+      {
+        "key": "previewDelayMs",
+        "type": "integer",
+        "label": "Picker preview delay (ms)",
+        "description": "PipeWire mode only: ignore streams shorter than this, which hides Chrome's picker preview.",
+        "min": 0,
+        "max": 10000,
+        "step": 250,
+        "defaultValue": 1000
+      }
+    ]
+  }
+}
