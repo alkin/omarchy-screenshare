@@ -19,8 +19,10 @@ set -euo pipefail
 HOST_NAME="io.github.alkin.screenshare"
 EXTENSION_ID="bphiabpgoemidcdmemcjamkppegeljpg"
 PLUGIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-EXTENSION_DIR="$PLUGIN_DIR/chrome-extension"
-HOST_PATH="$PLUGIN_DIR/native-host/screenshare-host"
+EXTENSION_DIR="$PLUGIN_DIR/chrome/extension"
+HOST_PATH="$PLUGIN_DIR/chrome/native-host/screenshare-host"
+# Location used by v1.0.0; dropped from the flags when found.
+LEGACY_EXTENSION_DIR="$PLUGIN_DIR/chrome-extension"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 # browser config dir : flags file (empty = load the extension by hand)
@@ -55,14 +57,14 @@ EOF
 # --load-extension list, keeping every other entry untouched.
 rewrite_flags() {
   local file="$1" mode="$2"
-  awk -v ext="$EXTENSION_DIR" -v mode="$mode" '
+  awk -v ext="$EXTENSION_DIR" -v legacy="$LEGACY_EXTENSION_DIR" -v mode="$mode" '
     BEGIN { found = 0 }
     /^--load-extension=/ {
       found = 1
       n = split(substr($0, length("--load-extension=") + 1), parts, ",")
       out = ""
       for (i = 1; i <= n; i++) {
-        if (parts[i] == "" || parts[i] == ext) continue
+        if (parts[i] == "" || parts[i] == ext || parts[i] == legacy) continue
         out = out (out == "" ? "" : ",") parts[i]
       }
       if (mode == "add") out = out (out == "" ? "" : ",") ext

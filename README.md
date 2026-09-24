@@ -27,7 +27,7 @@ This registers a small native messaging host for Google Chrome and Chromium.
 - **Chromium** loads the extension through `~/.config/chromium-flags.conf`. A backup is kept as `.bak`.
 - **Google Chrome** has ignored `--load-extension` since version 137, so load the extension by hand once:
   1. Open `chrome://extensions` and turn on **Developer mode**.
-  2. Click **Load unpacked** and pick `~/.config/omarchy/plugins/io.github.alkin.screenshare/chrome-extension`.
+  2. Click **Load unpacked** and pick `~/.config/omarchy/plugins/io.github.alkin.screenshare/chrome/extension`.
 
 Restart the browser, or reload the tabs you want tracked. Once the extension is connected, the widget uses it instead of PipeWire.
 
@@ -62,7 +62,7 @@ These settings go in the widget's entry in `~/.config/omarchy/shell.json`:
 
 - **PipeWire.** The widget reads the PipeWire graph through Quickshell. It counts a share when a screencast source from the desktop portal (`xdg-desktop-portal-hyprland`, or another portal) is linked to a Chrome node. Cameras are ignored.
 - **Extension.** A content script wraps `getDisplayMedia` in every page. It reads the chosen `displaySurface` (`monitor`, `window` or `browser`) and follows the track until it ends or is stopped.
-- **Native host.** The service worker forwards the list of shares to `native-host/screenshare-host`, a python3 script that uses only the standard library. The host writes it to `$XDG_RUNTIME_DIR/omarchy-screenshare/chrome-<pid>.json`, and the widget watches that folder. The host deletes its files when Chrome closes.
+- **Native host.** The service worker forwards the list of shares to `chrome/native-host/screenshare-host`, a python3 script that uses only the standard library. The host writes it to `$XDG_RUNTIME_DIR/omarchy-screenshare/chrome-<pid>.json`, and the widget watches that folder. The host deletes its files when Chrome closes.
 - **Focus on click.** Clicks are sent back through a FIFO in the same folder.
 
 ### Privacy and permissions

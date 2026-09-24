@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.alkin.screenshare",
   "name": "Screen Share Indicator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "alkin",
   "license": "MIT",
   "description": "A chip next to the clock while Chrome is sharing your screen, a window or a tab.",
