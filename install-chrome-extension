@@ -1,0 +1,130 @@
+#!/bin/bash
+
+# Set up (or remove) the optional Chrome/Chromium extension that lets the
+# Screen Share Indicator detect tab shares and show which site is sharing.
+#
+#   install-chrome-extension              install for every browser found
+#   install-chrome-extension --uninstall  undo everything this script did
+#
+# It touches only:
+#   ~/.config/<browser>/NativeMessagingHosts/io.github.alkin.screenshare.json
+#   ~/.config/chromium-flags.conf (--load-extension entry, Chromium only)
+#
+# Google Chrome ignores --load-extension since version 137, so there the
+# extension is loaded once by hand ("Load unpacked"); its ID is pinned by the
+# key in its manifest, so the native host still recognises it.
+
+set -euo pipefail
+
+HOST_NAME="io.github.alkin.screenshare"
+EXTENSION_ID="bphiabpgoemidcdmemcjamkppegeljpg"
+PLUGIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+EXTENSION_DIR="$PLUGIN_DIR/chrome-extension"
+HOST_PATH="$PLUGIN_DIR/native-host/screenshare-host"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+# browser config dir : flags file (empty = load the extension by hand)
+BROWSERS=(
+  "google-chrome:"
+  "chromium:chromium-flags.conf"
+)
+
+uninstall=false
+[[ ${1:-} == "--uninstall" ]] && uninstall=true
+
+changed=()
+manual=()
+
+write_host_manifest() {
+  local dir="$1/NativeMessagingHosts"
+  mkdir -p "$dir"
+  cat > "$dir/$HOST_NAME.json" <<EOF
+{
+  "name": "$HOST_NAME",
+  "description": "Omarchy Screen Share Indicator host",
+  "path": "$HOST_PATH",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://$EXTENSION_ID/"
+  ]
+}
+EOF
+}
+
+# Print the flags file with our extension added to (or removed from) the
+# --load-extension list, keeping every other entry untouched.
+rewrite_flags() {
+  local file="$1" mode="$2"
+  awk -v ext="$EXTENSION_DIR" -v mode="$mode" '
+    BEGIN { found = 0 }
+    /^--load-extension=/ {
+      found = 1
+      n = split(substr($0, length("--load-extension=") + 1), parts, ",")
+      out = ""
+      for (i = 1; i <= n; i++) {
+        if (parts[i] == "" || parts[i] == ext) continue
+        out = out (out == "" ? "" : ",") parts[i]
+      }
+      if (mode == "add") out = out (out == "" ? "" : ",") ext
+      if (out != "") print "--load-extension=" out
+      next
+    }
+    { print }
+    END { if (!found && mode == "add") print "--load-extension=" ext }
+  ' "$file"
+}
+
+update_flags() {
+  local file="$1" mode="$2" next
+  [[ -f $file ]] || { [[ $mode == "add" ]] && touch "$file" || return 0; }
+
+  next=$(rewrite_flags "$file" "$mode")
+  if [[ $next != "$(cat "$file")" ]]; then
+    cp "$file" "$file.bak"
+    printf '%s\n' "$next" > "$file"
+    changed+=("$file")
+  fi
+}
+
+found=false
+for entry in "${BROWSERS[@]}"; do
+  browser_dir="$CONFIG/${entry%%:*}"
+  flags_name="${entry##*:}"
+  [[ -d $browser_dir ]] || continue
+  found=true
+
+  if $uninstall; then
+    rm -f "$browser_dir/NativeMessagingHosts/$HOST_NAME.json"
+    if [[ -n $flags_name ]]; then update_flags "$CONFIG/$flags_name" remove; else manual+=("${entry%%:*}"); fi
+  else
+    write_host_manifest "$browser_dir"
+    if [[ -n $flags_name ]]; then update_flags "$CONFIG/$flags_name" add; else manual+=("${entry%%:*}"); fi
+  fi
+  echo "${entry%%:*}: $($uninstall && echo removed || echo installed)"
+done
+
+if ! $found; then
+  echo "No Google Chrome or Chromium profile found under $CONFIG." >&2
+  exit 1
+fi
+
+if ! $uninstall; then
+  chmod +x "$HOST_PATH"
+  command -v python3 >/dev/null || echo "Warning: python3 is required by the native host." >&2
+fi
+
+for file in "${changed[@]}"; do echo "updated $file (backup: $file.bak)"; done
+
+for browser in "${manual[@]}"; do
+  echo
+  if $uninstall; then
+    echo "$browser: open chrome://extensions and remove \"Omarchy Screen Share Indicator\"."
+  else
+    echo "$browser: load the extension once by hand:"
+    echo "  1. Open chrome://extensions and turn on Developer mode"
+    echo "  2. Click \"Load unpacked\" and pick: $EXTENSION_DIR"
+  fi
+done
+
+echo
+echo "Restart the browser to apply."

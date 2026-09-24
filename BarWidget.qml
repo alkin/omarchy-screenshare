@@ -45,9 +45,21 @@ BarWidget {
     : (pipewireFallback ? Model.pipewireSessions(pipewireCount) : [])
   readonly property bool sharing: sessions.length > 0
 
-  visible: sharing
-  implicitWidth: root.vertical ? root.barSize : chip.width + Style.space(8)
-  implicitHeight: root.vertical ? chip.height + Style.space(8) : root.barSize
+  // Keep the last content on screen while the chip collapses.
+  property var shownSessions: []
+  onSessionsChanged: if (sessions.length > 0) shownSessions = sessions
+
+  // 0 = collapsed, 1 = fully expanded. The slot only collapses once the widget
+  // is invisible, so stay visible until the closing animation finishes.
+  property real reveal: sharing ? 1 : 0
+  Behavior on reveal {
+    NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+  }
+
+  visible: sharing || reveal > 0
+  clip: true
+  implicitWidth: root.vertical ? root.barSize : Math.round((chip.width + Style.space(8)) * reveal)
+  implicitHeight: root.vertical ? Math.round((chip.height + Style.space(8)) * reveal) : root.barSize
 
   onPipewireLiveCountChanged: {
     if (pipewireLiveCount > pipewireCount) {
@@ -168,6 +180,7 @@ BarWidget {
     id: chip
 
     anchors.centerIn: parent
+    opacity: root.reveal
     height: Math.round(root.vertical ? content.implicitWidth + Style.space(8) : root.barSize * 0.68)
     width: root.vertical ? Math.round(root.barSize * 0.68) : content.implicitWidth + Style.space(16)
     radius: Math.min(width, height) / 2
@@ -180,7 +193,7 @@ BarWidget {
       spacing: Style.space(5)
 
       Text {
-        text: Model.icon(root.sessions)
+        text: Model.icon(root.shownSessions)
         color: root.bar ? root.bar.background : Color.background
         font.family: root.bar ? root.bar.fontFamily : Style.font.family
         font.pixelSize: Style.font.body
@@ -190,7 +203,7 @@ BarWidget {
 
       Text {
         visible: root.showLabel && !root.vertical
-        text: Model.label(root.sessions)
+        text: Model.label(root.shownSessions)
         color: root.bar ? root.bar.background : Color.background
         font.family: root.bar ? root.bar.fontFamily : Style.font.family
         font.pixelSize: Style.font.caption

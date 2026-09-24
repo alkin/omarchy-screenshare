@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""Native messaging host for the Omarchy Screen Share Indicator extension.
+
+Chrome starts one instance per profile and keeps it running while the
+extension is loaded. It mirrors the extension's capture list into
+$XDG_RUNTIME_DIR/omarchy-screenshare/chrome-<pid>.json for the bar widget,
+and relays focus commands written to the FIFO cmd-<pid> back to Chrome.
+Only the standard library is used; nothing leaves the machine.
+"""
+
+import json
+import os
+import select
+import signal
+import struct
+import sys
+import time
+
+STATE_DIR = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}", "omarchy-screenshare")
+PID = os.getpid()
+STATE_PATH = os.path.join(STATE_DIR, f"chrome-{PID}.json")
+FIFO_PATH = os.path.join(STATE_DIR, f"cmd-{PID}")
+MAX_MESSAGE = 1024 * 1024
+
+
+def pid_alive(pid):
+    return os.path.exists(f"/proc/{pid}")
+
+
+def remove_stale():
+    for name in os.listdir(STATE_DIR):
+        stem, _, _ = name.partition(".")
+        prefix, _, pid = stem.rpartition("-")
+        if prefix not in ("chrome", "cmd") or not pid.isdigit() or int(pid) == PID:
+            continue
+        if not pid_alive(int(pid)):
+            try:
+                os.unlink(os.path.join(STATE_DIR, name))
+            except FileNotFoundError:
+                pass
+
+
+def browser_info():
+    ppid = os.getppid()
+    try:
+        with open(f"/proc/{ppid}/comm") as comm:
+            name = comm.read().strip()
+    except OSError:
+        name = ""
+    return ppid, name
+
+
+def write_state(sessions):
+    browser_pid, browser = browser_info()
+    state = {
+        "pid": PID,
+        "browserPid": browser_pid,
+        "browser": browser,
+        "updated": int(time.time() * 1000),
+        "sessions": sessions,
+    }
+    tmp = os.path.join(STATE_DIR, f".chrome-{PID}.json.tmp")
+    with open(tmp, "w") as handle:
+        json.dump(state, handle)
+    os.replace(tmp, STATE_PATH)
+
+
+def cleanup(*_):
+    for path in (STATE_PATH, FIFO_PATH):
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+    sys.exit(0)
+
+
+def read_exact(fd, size):
+    data = b""
+    while len(data) < size:
+        chunk = os.read(fd, size - len(data))
+        if not chunk:
+            return None
+        data += chunk
+    return data
+
+
+def read_message(fd):
+    header = read_exact(fd, 4)
+    if header is None:
+        return None
+    (length,) = struct.unpack("=I", header)
+    if length > MAX_MESSAGE:
+        return None
+    body = read_exact(fd, length)
+    if body is None:
+        return None
+    return json.loads(body.decode("utf-8"))
+
+
+def send_message(message):
+    data = json.dumps(message).encode("utf-8")
+    sys.stdout.buffer.write(struct.pack("=I", len(data)) + data)
+    sys.stdout.buffer.flush()
+
+
+def clean_sessions(raw):
+    sessions = []
+    for item in raw if isinstance(raw, list) else []:
+        if not isinstance(item, dict):
+            continue
+        sessions.append({
+            "tabId": int(item.get("tabId") or 0),
+            "windowId": int(item.get("windowId") or 0),
+            "frameId": int(item.get("frameId") or 0),
+            "origin": str(item.get("origin") or "")[:255],
+            "title": str(item.get("title") or "")[:512],
+            "surface": str(item.get("surface") or "unknown")[:16],
+            "since": int(item.get("since") or 0),
+        })
+    return sessions
+
+
+def main():
+    os.makedirs(STATE_DIR, mode=0o700, exist_ok=True)
+    remove_stale()
+
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGPIPE):
+        signal.signal(sig, cleanup)
+
+    if not os.path.exists(FIFO_PATH):
+        os.mkfifo(FIFO_PATH, 0o600)
+    # Held open read/write so it never reports EOF between writers.
+    fifo_fd = os.open(FIFO_PATH, os.O_RDWR | os.O_NONBLOCK)
+    stdin_fd = sys.stdin.fileno()
+    pending = b""
+
+    write_state([])
+    send_message({"hello": True})
+
+    try:
+        while True:
+            ready, _, _ = select.select([stdin_fd, fifo_fd], [], [])
+
+            if stdin_fd in ready:
+                message = read_message(stdin_fd)
+                if message is None:
+                    break
+                if isinstance(message, dict) and message.get("type") == "state":
+                    write_state(clean_sessions(message.get("sessions")))
+
+            if fifo_fd in ready:
+                try:
+                    pending += os.read(fifo_fd, 4096)
+                except BlockingIOError:
+                    pass
+                while b"\n" in pending:
+                    line, pending = pending.split(b"\n", 1)
+                    try:
+                        command = json.loads(line)
+                    except ValueError:
+                        continue
+                    if isinstance(command, dict) and command.get("cmd") == "focus":
+                        send_message({"cmd": "focus", "tabId": int(command.get("tabId") or 0)})
+    finally:
+        cleanup()
+
+
+if __name__ == "__main__":
+    main()
