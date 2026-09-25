@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.alkin.screenshare",
   "name": "Screen Share Indicator",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "author": "alkin",
   "license": "MIT",
   "description": "A chip next to the clock while Chrome is sharing your screen, a window or a tab.",
@@ -34,8 +34,8 @@
       {
         "key": "pipewireFallback",
         "type": "boolean",
-        "label": "Detect without the Chrome extension",
-        "description": "Use PipeWire to detect screen and window shares when the optional extension is not installed.",
+        "label": "Detect screen and window shares via PipeWire",
+        "description": "Watch PipeWire for screencasts flowing into Chrome. Works without the extension, and keeps screen/window shares visible even if a page interferes with it.",
         "defaultValue": true
       },
       {

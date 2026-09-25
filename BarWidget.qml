@@ -37,12 +37,15 @@ BarWidget {
     return count
   }
   // Chrome's picker opens a short-lived preview stream before "Share" is
-  // pressed; only count streams that outlive it.
+  // pressed; only count streams that outlive it. With the extension connected
+  // real shares are reported by it at once, so a stream it doesn't explain
+  // gets a longer grace period before it is shown on its own.
   property int pipewireCount: 0
+  readonly property int pipewireGraceMs: extensionConnected ? Math.max(previewDelayMs, 5000) : previewDelayMs
 
-  readonly property var sessions: extensionConnected
-    ? Model.extensionSessions(extensionStates)
-    : (pipewireFallback ? Model.pipewireSessions(pipewireCount) : [])
+  readonly property var sessions: Model.mergeSessions(
+    extensionConnected ? Model.extensionSessions(extensionStates) : [],
+    pipewireFallback ? pipewireCount : 0)
   readonly property bool sharing: sessions.length > 0
 
   // Keep the last content on screen while the chip collapses.
@@ -100,7 +103,7 @@ BarWidget {
 
   Timer {
     id: previewTimer
-    interval: root.previewDelayMs
+    interval: root.pipewireGraceMs
     onTriggered: root.pipewireCount = root.pipewireLiveCount
   }
 

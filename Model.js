@@ -83,6 +83,19 @@ function pipewireSessions(count) {
   return list
 }
 
+// PipeWire sees every screen/window share from outside the browser, so a page
+// cannot hide one from it. Screencast streams the extension already explains
+// (its monitor/window sessions) are not counted twice; any others show up as
+// generic sessions. Tab shares never touch PipeWire and come only from the
+// extension.
+function mergeSessions(extension, pipewireCount) {
+  var explained = 0
+  for (var i = 0; i < extension.length; i++) {
+    if (extension[i].surface === "monitor" || extension[i].surface === "window") explained++
+  }
+  return extension.concat(pipewireSessions(Math.max(0, pipewireCount - explained)))
+}
+
 // The first session drives the chip; sessions are sorted so that the most
 // revealing kind of share (the whole screen) wins.
 function primarySurface(sessions) {

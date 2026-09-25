@@ -1,28 +1,43 @@
 {
   "manifest_version": 3,
   "name": "Omarchy Screen Share Indicator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Tells the Omarchy bar when a page is sharing your screen, a window or a tab. Installed by the io.github.alkin.screenshare plugin.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuQf4uJvlV1Gs7is61vxQdekOjx1C844hDY17d5hG5CpgS+yi0l69LZepZEphsJ6kZTE8Fbd2Q/DLiONoWgMyM6aOs9SypFmmx4TjqceF/E/pF1fJskYpR1B83vGU3IyeprTkB2wfB36pFwhnfuv6t7n/u95UR/9LbWEKF2N4Tb0lf62k1lp+P58UL8k0mQk2NvvTQAW1DgvuhXSr/3zoWPRO48YH+UEdzsLA1ixa6C90x5p54ydOTwHJTfKk/YuDF387dfrSJhUiiV1iC6YauNAb27kEPlF4SsZ4WiKUAkGWQR9wJQZvqoy8eVLS4qyJh4VlZyhjyhrBIMZuz8EmNwIDAQAB",
   "minimum_chrome_version": "111",
-  "permissions": ["nativeMessaging", "tabs"],
-  "background": { "service_worker": "background.js" },
+  "permissions": [
+    "nativeMessaging",
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["inject.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "inject.js"
+      ],
       "world": "MAIN",
       "run_at": "document_start",
       "all_frames": true,
       "match_origin_as_fallback": true
     },
     {
-      "matches": ["<all_urls>"],
-      "js": ["bridge.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "bridge.js"
+      ],
       "run_at": "document_start",
       "all_frames": true,
       "match_origin_as_fallback": true
     }
   ],
-  "icons": { "128": "icon.png" }
+  "icons": {
+    "128": "icon.png"
+  }
 }

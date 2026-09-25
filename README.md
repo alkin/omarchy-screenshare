@@ -60,10 +60,19 @@ These settings go in the widget's entry in `~/.config/omarchy/shell.json`:
 
 ## How it works
 
-- **PipeWire.** The widget reads the PipeWire graph through Quickshell. It counts a share when a screencast source from the desktop portal (`xdg-desktop-portal-hyprland`, or another portal) is linked to a Chrome node. Cameras are ignored.
-- **Extension.** A content script wraps `getDisplayMedia` in every page. It reads the chosen `displaySurface` (`monitor`, `window` or `browser`) and follows the track until it ends or is stopped.
+- **PipeWire.** The widget reads the PipeWire graph through Quickshell. It counts a share when a screencast source from the desktop portal (`xdg-desktop-portal-hyprland`, or another portal) is linked to a Chrome node. Cameras are ignored. This stays on when the extension is connected: streams the extension doesn't account for still show up.
+- **Extension.** A content script wraps `getDisplayMedia` in every page. It reads the chosen `displaySurface` (`monitor`, `window` or `browser`) and follows the track until it ends or is stopped. It hands the list to the extension over a private channel set up before any page script runs, not over `window.postMessage`.
 - **Native host.** The service worker forwards the list of shares to `chrome/native-host/screenshare-host`, a python3 script that uses only the standard library. The host writes it to `$XDG_RUNTIME_DIR/omarchy-screenshare/chrome-<pid>.json`, and the widget watches that folder. The host deletes its files when Chrome closes.
 - **Focus on click.** Clicks are sent back through a FIFO in the same folder.
+
+### Trust model
+
+- **Screen and window shares** come from PipeWire, outside the browser. A web page cannot hide them or fake them.
+- **Tab shares** can only be seen from inside the page's own JavaScript world, so the extension is built to resist the page:
+  - It captures every browser API it relies on before page scripts load, so later prototype patches (`readyState`, `Promise.then`, `Array`, `JSON`, events) don't affect it.
+  - It reports through a detached DOM node that the page never gets a reference to, so the page can't read, forge or block those reports.
+  - It also wraps same-origin child frames, so a page can't borrow an unwrapped `getDisplayMedia` from a new iframe.
+  - A page that works hard enough to evade tab detection may still manage it. The indicator is a convenience, and Chrome's own "sharing this tab" bar stays the authority.
 
 ### Privacy and permissions
 
