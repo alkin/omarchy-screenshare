@@ -1,10 +1,10 @@
 # Screen Share Indicator
 
-A chip next to the clock in the Omarchy bar while Chrome is sharing your **screen**, a **window** or a **tab**. Hover it to see which site is sharing. Click it to jump to that tab.
+A chip next to the clock in the Omarchy bar while Chrome or Firefox is sharing your **screen** or a **window**, or Chrome is sharing a **tab**. Hover it to see which site is sharing. Click it to jump to that tab.
 
 ![preview](preview.png)
 
-- **Screen and window shares** work out of the box. The widget watches PipeWire for the portal's screencast stream flowing into Chrome.
+- **Screen and window shares** work out of the box. The widget watches PipeWire for the portal's screencast stream flowing into Chrome, Chromium or Firefox. In Firefox, pick **Use operating system settings** in its share dialog: a tab chosen directly in Firefox's own list is captured inside the browser, never reaches PipeWire, and does not show the chip.
 - **Tab shares** never leave the browser, so no desktop API can see them. An optional companion extension (below) reports them. It also names the exact kind of share and the site, and it makes detection instant.
 
 ## Install
@@ -42,7 +42,7 @@ Restart the browser, or reload the tabs you want tracked. Once the extension is 
 | `… +1` | more than one share is running |
 
 - **Hover** to list every share and the site running it.
-- **Click** to focus the sharing tab (with the extension) or the Chrome window (without it).
+- **Click** to focus the sharing tab (with the extension) or the browser window (without it).
 
 ## Configure
 
@@ -60,7 +60,7 @@ These settings go in the widget's entry in `~/.config/omarchy/shell.json`:
 
 ## How it works
 
-- **PipeWire.** The widget reads the PipeWire graph through Quickshell. It counts a share when a screencast source from the desktop portal (`xdg-desktop-portal-hyprland`, or another portal) is linked to a Chrome node. Cameras are ignored. This stays on when the extension is connected: streams the extension doesn't account for still show up.
+- **PipeWire.** The widget reads the PipeWire graph through Quickshell. It counts a share when a screencast source from the desktop portal (`xdg-desktop-portal-hyprland`, or another portal) is linked to a Chrome, Chromium or Firefox node. Cameras are ignored. This stays on when the extension is connected: streams the extension doesn't account for still show up.
 - **Extension.** A content script wraps `getDisplayMedia` in every page. It reads the chosen `displaySurface` (`monitor`, `window` or `browser`) and follows the track until it ends or is stopped. It hands the list to the extension over a private channel set up before any page script runs, not over `window.postMessage`.
 - **Native host.** The service worker forwards the list of shares to `chrome/native-host/screenshare-host`, a python3 script that uses only the standard library. The host writes it to `$XDG_RUNTIME_DIR/omarchy-screenshare/chrome-<pid>.json`, and the widget watches that folder. The host deletes its files when Chrome closes.
 - **Focus on click.** Clicks are sent back through a FIFO in the same folder.

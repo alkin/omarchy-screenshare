@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Focus the Chrome tab/window that is sharing.
+# Focus the browser tab/window that is sharing.
 #
-#   screenshare-focus                  focus a Chrome window (PipeWire-only mode)
+#   screenshare-focus                  focus a browser window (PipeWire-only mode)
 #   screenshare-focus <hostPid> <tabId> activate that tab through the extension,
 #                                      then raise the window that shows it
 
@@ -16,9 +16,9 @@ focus_address() {
   [[ -n $1 ]] && hyprctl dispatch focuswindow "address:$1" >/dev/null
 }
 
-focus_any_chrome() {
+focus_any_browser() {
   local address
-  address=$(hyprctl clients -j | jq -r '[.[] | select(.class | test("chrom"; "i"))] | sort_by(.focusHistoryID) | .[0].address // empty')
+  address=$(hyprctl clients -j | jq -r '[.[] | select(.class | test("chrom|firefox"; "i"))] | sort_by(.focusHistoryID) | .[0].address // empty')
   focus_address "$address"
 }
 
@@ -36,7 +36,7 @@ if [[ $host_pid =~ ^[0-9]+$ && $tab_id =~ ^[0-9]+$ ]]; then
     # Once the tab is active its title becomes the window title.
     for _ in 1 2 3 4 5 6 7 8 9 10; do
       address=$(hyprctl clients -j | jq -r --arg title "$title" --arg pid "$browser_pid" '
-        [.[] | select(.class | test("chrom"; "i"))
+        [.[] | select(.class | test("chrom|firefox"; "i"))
              | select($pid == "" or (.pid | tostring) == $pid)
              | select($title != "" and (.title | startswith($title)))]
         | .[0].address // empty')
@@ -49,4 +49,4 @@ if [[ $host_pid =~ ^[0-9]+$ && $tab_id =~ ^[0-9]+$ ]]; then
   fi
 fi
 
-focus_any_chrome
+focus_any_browser

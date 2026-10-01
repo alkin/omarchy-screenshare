@@ -30,16 +30,18 @@ function isScreencastName(name) {
   return /xdg-desktop-portal|xdph|xdpw|screencast|screen-cast/i.test(String(name || ""))
 }
 
-function isChromeName(name) {
-  return /chrom/i.test(String(name || ""))
+// Browsers whose screen and window shares are seen through PipeWire: Chrome
+// and Chromium name their capture node "chrome"/"chromium", Firefox "firefox".
+function isBrowserName(name) {
+  return /chrom|firefox/i.test(String(name || ""))
 }
 
-// A PipeWire link group counts as a Chrome share when a video source (the
-// portal's screencast node) feeds a Chrome node. Quickshell leaves video
+// A PipeWire link group counts as a browser share when a video source (the
+// portal's screencast node) feeds a browser node. Quickshell leaves video
 // input streams unclassified (type 0, isStream false) and the group's state
 // reads as an error until bound, so only the source type and the target name
 // are trusted; the group disappears as soon as the stream stops.
-function isChromeShareLink(group, videoFlag) {
+function isBrowserShareLink(group, videoFlag) {
   if (!group || !group.source || !group.target) return false
 
   var source = group.source
@@ -47,7 +49,7 @@ function isChromeShareLink(group, videoFlag) {
   if (source.isStream) return false
   if ((source.type & videoFlag) === 0) return false
   if (!isScreencastName(source.name)) return false
-  return isChromeName(target.name)
+  return isBrowserName(target.name)
 }
 
 // Flatten every extension state file into one list of sessions.

@@ -27,12 +27,12 @@ BarWidget {
   }
   readonly property bool extensionConnected: extensionStates.length > 0
 
-  // --- PipeWire: portal video streams flowing into Chrome (screen/window only).
+  // --- PipeWire: portal video streams flowing into a browser (screen/window only).
   readonly property int pipewireLiveCount: {
     var groups = Pipewire.linkGroups ? Pipewire.linkGroups.values : []
     var count = 0
     for (var i = 0; i < groups.length; i++) {
-      if (Model.isChromeShareLink(groups[i], PwNodeType.Video)) count++
+      if (Model.isBrowserShareLink(groups[i], PwNodeType.Video)) count++
     }
     return count
   }
@@ -166,7 +166,7 @@ BarWidget {
           source: g.source ? { name: g.source.name, type: g.source.type, isStream: g.source.isStream } : null,
           target: g.target ? { name: g.target.name, type: g.target.type, isStream: g.target.isStream } : null,
           state: g.state,
-          match: Model.isChromeShareLink(g, PwNodeType.Video)
+          match: Model.isBrowserShareLink(g, PwNodeType.Video)
         })
       }
       return JSON.stringify({
