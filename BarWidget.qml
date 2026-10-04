@@ -14,6 +14,7 @@ BarWidget {
   readonly property bool showLabel: setting("showLabel", true) === true
   readonly property bool pipewireFallback: setting("pipewireFallback", true) === true
   readonly property int previewDelayMs: Number(setting("previewDelayMs", 1000))
+  readonly property bool dndWhileSharing: setting("dndWhileSharing", false) === true
 
   readonly property string stateDir: Quickshell.env("XDG_RUNTIME_DIR") + "/omarchy-screenshare"
   readonly property string pluginDir: String(Qt.resolvedUrl(".")).replace(/^file:\/\//, "").replace(/\/$/, "")
@@ -47,6 +48,27 @@ BarWidget {
     extensionConnected ? Model.extensionSessions(extensionStates) : [],
     pipewireFallback ? pipewireCount : 0)
   readonly property bool sharing: sessions.length > 0
+
+  // --- Do not disturb while sharing (opt-in). DND is turned on when a share
+  // starts only if it was off, and turned back off when the last share ends
+  // only if this widget turned it on. A marker file in the state dir records
+  // that, so a shell restart mid-share still restores DND afterwards.
+  onSharingChanged: syncDnd()
+  onDndWhileSharingChanged: syncDnd()
+  Component.onCompleted: syncDnd()
+  function syncDnd() {
+    var script = (root.sharing && root.dndWhileSharing)
+      ? 'mkdir -p "$1"; [ -e "$1/dnd-engaged" ] && exit 0; '
+        + '[ "$(omarchy-shell notifications isDnd)" = off ] || exit 0; '
+        + 'omarchy-shell notifications setDnd on >/dev/null && : > "$1/dnd-engaged"'
+      : '[ -e "$1/dnd-engaged" ] || exit 0; '
+        + 'omarchy-shell notifications setDnd off >/dev/null; rm -f "$1/dnd-engaged"'
+    if (root.sharing && !root.dndWhileSharing) return
+    dndProc.running = false
+    dndProc.command = ["sh", "-c", script, "sh", root.stateDir]
+    dndProc.running = true
+  }
+  Process { id: dndProc }
 
   // Keep the last content on screen while the chip collapses.
   property var shownSessions: []

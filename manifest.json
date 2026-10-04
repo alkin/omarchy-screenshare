@@ -21,7 +21,8 @@
     "defaults": {
       "showLabel": true,
       "pipewireFallback": true,
-      "previewDelayMs": 1000
+      "previewDelayMs": 1000,
+      "dndWhileSharing": false
     },
     "schema": [
       {
@@ -47,6 +48,13 @@
         "max": 10000,
         "step": 250,
         "defaultValue": 1000
+      },
+      {
+        "key": "dndWhileSharing",
+        "type": "boolean",
+        "label": "Do not disturb while sharing",
+        "description": "Turn on do not disturb when a share starts, and back off when it ends (only if it was off before).",
+        "defaultValue": false
       }
     ]
   }

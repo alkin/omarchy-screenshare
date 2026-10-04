@@ -53,6 +53,7 @@ These settings go in the widget's entry in `~/.config/omarchy/shell.json`:
 | `showLabel` | `true` | Show Screen / Window / Tab next to the icon |
 | `pipewireFallback` | `true` | Detect screen and window shares when the extension is not installed |
 | `previewDelayMs` | `1000` | PipeWire mode only: ignore streams shorter than this, so Chrome's picker preview doesn't flash the chip |
+| `dndWhileSharing` | `false` | Turn on Omarchy's do not disturb while anything is being shared, and back off when the last share ends. Left alone if it was already on |
 
 ```json
 { "id": "io.github.alkin.screenshare", "showLabel": false }
